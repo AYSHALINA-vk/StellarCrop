@@ -12,7 +12,8 @@
     "prisma:studio": "prisma studio",
     "stellar:test": "ts-node src/scripts/stellar-test-account.ts",
     "stellar:issue-test": "ts-node src/scripts/test-issue-asset.ts",
-    "stellar:anchor-test": "ts-node src/scripts/test-anchor-hash.ts"
+    "stellar:anchor-test": "ts-node src/scripts/test-anchor-hash.ts",
+    "stellar:transfer-test": "ts-node src/scripts/test-transfer.ts"
   },
   "dependencies": {
     "@prisma/client": "^6.9.0",
