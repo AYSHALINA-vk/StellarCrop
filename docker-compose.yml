@@ -1,0 +1,16 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: stellarcrop-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: stellarcrop
+      POSTGRES_PASSWORD: stellarcrop
+      POSTGRES_DB: stellarcrop_dev
+    ports:
+      - "5432:5432"
+    volumes:
+      - stellarcrop_pgdata:/var/lib/postgresql/data
+
+volumes:
+  stellarcrop_pgdata:

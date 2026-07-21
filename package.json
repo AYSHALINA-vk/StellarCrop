@@ -1,0 +1,33 @@
+{
+  "name": "stellarcrop-backend",
+  "version": "1.0.0",
+  "description": "StellarCrop supply-chain backend API",
+  "main": "dist/server.js",
+  "scripts": {
+    "dev": "nodemon",
+    "build": "tsc",
+    "start": "node dist/server.js",
+    "prisma:generate": "prisma generate",
+    "prisma:migrate": "prisma migrate dev",
+    "prisma:studio": "prisma studio",
+    "stellar:test": "ts-node src/scripts/stellar-test-account.ts",
+    "stellar:issue-test": "ts-node src/scripts/test-issue-asset.ts",
+    "stellar:anchor-test": "ts-node src/scripts/test-anchor-hash.ts"
+  },
+  "dependencies": {
+    "@prisma/client": "^6.9.0",
+    "@stellar/stellar-sdk": "^16.0.1",
+    "cors": "^2.8.5",
+    "dotenv": "^16.5.0",
+    "express": "^4.21.0"
+  },
+  "devDependencies": {
+    "@types/cors": "^2.8.17",
+    "@types/express": "^4.17.21",
+    "@types/node": "^22.10.0",
+    "nodemon": "^3.1.0",
+    "prisma": "^6.9.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.7.0"
+  }
+}

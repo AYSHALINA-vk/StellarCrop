@@ -1,0 +1,88 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ── Enums ──────────────────────────────────────────────
+
+enum UserRole {
+  FARMER
+  WHOLESALER
+  RETAILER
+  CONSUMER
+  GOVT_ADMIN
+}
+
+enum BatchStatus {
+  HARVESTED
+  RESERVED
+  WITH_WHOLESALER
+  WITH_RETAILER
+  SOLD
+}
+
+enum TransactionStatus {
+  PENDING
+  COMPLETED
+  FAILED
+}
+
+// ── Models ─────────────────────────────────────────────
+
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  name      String
+  role      UserRole
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  batches          Batch[]
+  sentTransfers    Transaction[] @relation("FromUser")
+  receivedTransfers Transaction[] @relation("ToUser")
+
+  @@map("users")
+}
+
+model Batch {
+  id               String      @id @default(uuid())
+  farmerId         String
+  cropType         String
+  quantity         Float
+  harvestDate      DateTime
+  expiryDate       DateTime
+  region           String
+  status           BatchStatus @default(HARVESTED)
+  stellarAssetCode String?
+  dataHash         String?
+  createdAt        DateTime    @default(now())
+  updatedAt        DateTime    @updatedAt
+
+  // Relations
+  farmer       User          @relation(fields: [farmerId], references: [id])
+  transactions Transaction[]
+
+  @@map("batches")
+}
+
+model Transaction {
+  id             String            @id @default(uuid())
+  batchId        String
+  fromUserId     String
+  toUserId       String
+  stellarTxHash  String?
+  status         TransactionStatus @default(PENDING)
+  createdAt      DateTime          @default(now())
+
+  // Relations
+  batch    Batch @relation(fields: [batchId], references: [id])
+  fromUser User  @relation("FromUser", fields: [fromUserId], references: [id])
+  toUser   User  @relation("ToUser", fields: [toUserId], references: [id])
+
+  @@map("transactions")
+}
