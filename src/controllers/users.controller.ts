@@ -87,3 +87,16 @@ export async function deleteUser(req: Request, res: Response, next: NextFunction
     next(err);
   }
 }
+
+export async function verifyUser(req: Request, res: Response, next: NextFunction) {
+  try {
+    const user = await prisma.user.update({
+      where: { id: req.params.id },
+      data: { govtVerified: true },
+    });
+    if (!user) throw new AppError('User not found', 404);
+    res.json({ success: true, data: user, message: 'User verified by government' });
+  } catch (err) {
+    next(err);
+  }
+}

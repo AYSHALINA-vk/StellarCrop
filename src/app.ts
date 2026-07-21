@@ -2,6 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import routes from './routes';
 import { errorHandler } from './middleware/errorHandler';
+import { prisma } from './lib/prisma';
 
 const app = express();
 
@@ -10,8 +11,13 @@ app.use(cors());
 app.use(express.json());
 
 // ── Health check ───────────────────────────────────────
-app.get('/health', (_req, res) => {
-  res.json({ status: 'ok' });
+app.get('/health', async (_req, res) => {
+  let db = false;
+  try {
+    await prisma.$queryRaw`SELECT 1`;
+    db = true;
+  } catch (_) { /* db remains false */ }
+  res.json({ status: 'ok', db });
 });
 
 // ── API routes ─────────────────────────────────────────

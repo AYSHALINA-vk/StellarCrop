@@ -54,7 +54,7 @@ export async function createBatch(req: Request, res: Response, next: NextFunctio
     }
 
     // ── 2. Create the batch row in Postgres (status: HARVESTED) ──
-    let batch = await prisma.batch.create({
+    const created = await prisma.batch.create({
       data: {
         farmerId,
         cropType,
@@ -66,15 +66,15 @@ export async function createBatch(req: Request, res: Response, next: NextFunctio
     });
 
     // ── 3. Issue the batch asset on Stellar ──
-    const issued = await issueBatchAsset(farmer.stellarSecretKey, batch.id);
+    const issued = await issueBatchAsset(farmer.stellarSecretKey, created.id);
 
     // ── 4. Anchor the batch data hash on Stellar ──
-    const batchDataForHash = { cropType, quantity, harvestDate, expiryDate, region };
-    const anchored = await anchorBatchHash(farmer.stellarSecretKey, batch.id, batchDataForHash);
+    const batchDataForHash = { cropType, quantity, harvestDate, expiryDate, region, farmerId };
+    const anchored = await anchorBatchHash(farmer.stellarSecretKey, created.id, batchDataForHash);
 
     // ── 5. Update the batch row with Stellar asset code & data hash ──
-    batch = await prisma.batch.update({
-      where: { id: batch.id },
+    const batch = await prisma.batch.update({
+      where: { id: created.id },
       data: {
         stellarAssetCode: issued.assetCode,
         dataHash: anchored.hash,
@@ -84,14 +84,18 @@ export async function createBatch(req: Request, res: Response, next: NextFunctio
       },
     });
 
+    const explorerLink = `https://stellar.expert/explorer/testnet/account/${farmer.stellarPublicKey}`;
+
     res.status(201).json({
       success: true,
       data: batch,
       stellar: {
         assetCode: issued.assetCode,
+        issuerPublicKey: farmer.stellarPublicKey,
         issueTransactionHash: issued.transactionHash,
         anchorTransactionHash: anchored.transactionHash,
         dataHash: anchored.hash,
+        explorerLink,
       },
     });
   } catch (err) {
@@ -131,6 +135,31 @@ export async function deleteBatch(req: Request, res: Response, next: NextFunctio
       where: { id: req.params.id },
     });
     res.json({ success: true, message: 'Batch deleted' });
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function getMarketplaceBatches(req: Request, res: Response, next: NextFunction) {
+  try {
+    const batches = await prisma.batch.findMany({
+      where: { status: 'HARVESTED' },
+      select: {
+        id: true,
+        cropType: true,
+        quantity: true,
+        harvestDate: true,
+        expiryDate: true,
+        region: true,
+        status: true,
+        stellarAssetCode: true,
+        farmer: {
+          select: { govtVerified: true },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+    res.json({ success: true, data: batches });
   } catch (err) {
     next(err);
   }

@@ -57,7 +57,7 @@ export async function getTransactionById(req: Request, res: Response, next: Next
 
 export async function createTransaction(req: Request, res: Response, next: NextFunction) {
   try {
-    const { batchId, fromUserId, toUserId } = req.body;
+    const { batchId, toUserId } = req.body;
 
     // ── 1. Look up the batch ──
     const batch = await prisma.batch.findUnique({ where: { id: batchId } });
@@ -66,56 +66,95 @@ export async function createTransaction(req: Request, res: Response, next: NextF
       throw new AppError('Batch does not have a Stellar asset code — issue it first', 400);
     }
 
-    // ── 2. Look up both users and their Stellar keys ──
+    // ── 2. Determine the current holder ──
+    const lastTransfer = await prisma.transaction.findFirst({
+      where: { batchId, status: 'COMPLETED' },
+      orderBy: { createdAt: 'desc' },
+    });
+    const fromUserId = lastTransfer ? lastTransfer.toUserId : batch.farmerId;
+
+    if (fromUserId === toUserId) {
+      throw new AppError('Cannot transfer batch to the current holder', 400);
+    }
+
+    // ── 3. Look up both users and their Stellar keys ──
     const [fromUser, toUser] = await Promise.all([
       prisma.user.findUnique({ where: { id: fromUserId } }),
       prisma.user.findUnique({ where: { id: toUserId } }),
     ]);
-    if (!fromUser) throw new AppError('Sender (fromUser) not found', 404);
+    if (!fromUser) throw new AppError('Current holder (fromUser) not found', 404);
     if (!toUser) throw new AppError('Recipient (toUser) not found', 404);
-    if (!fromUser.stellarSecretKey) {
-      throw new AppError('Sender does not have a Stellar secret key configured', 400);
+    if (!fromUser.stellarSecretKey || !fromUser.stellarPublicKey) {
+      throw new AppError('Current holder does not have Stellar keys configured', 400);
     }
-    if (!toUser.stellarSecretKey) {
-      throw new AppError('Recipient does not have a Stellar secret key configured', 400);
-    }
-
-    // ── 3. Look up the issuer (farmer who created the batch) ──
-    const farmer = await prisma.user.findUnique({ where: { id: batch.farmerId } });
-    if (!farmer || !farmer.stellarPublicKey) {
-      throw new AppError('Batch issuer (farmer) not found or missing Stellar public key', 400);
+    if (!toUser.stellarSecretKey || !toUser.stellarPublicKey) {
+      throw new AppError('Recipient does not have Stellar keys configured', 400);
     }
 
-    // ── 4. Execute the Stellar custody transfer ──
-    const transfer = await transferBatch(
-      batch.stellarAssetCode,
-      farmer.stellarPublicKey,
-      fromUser.stellarSecretKey,
-      toUser.stellarSecretKey,
-    );
+    // ── 4. Look up the asset issuer (the farmer who originally created the batch) ──
+    let issuerPublicKey = fromUser.stellarPublicKey;
+    if (fromUserId !== batch.farmerId) {
+      const farmer = await prisma.user.findUnique({ where: { id: batch.farmerId } });
+      if (!farmer?.stellarPublicKey) {
+        throw new AppError('Batch issuer (farmer) not found or missing Stellar public key', 400);
+      }
+      issuerPublicKey = farmer.stellarPublicKey;
+    }
 
-    // ── 5. Create the Transaction row with status COMPLETED ──
+    // ── 5. Execute the Stellar custody transfer ──
+    let stellarTxHash: string | null = null;
+    let stellarError: string | null = null;
+
+    try {
+      const transfer = await transferBatch(
+        batch.stellarAssetCode,
+        issuerPublicKey,
+        fromUser.stellarSecretKey,
+        toUser.stellarSecretKey,
+      );
+      stellarTxHash = transfer.transactionHash;
+    } catch (err: any) {
+      stellarError = err?.response?.data?.extras?.result_codes
+        ? `Stellar tx failed: ${JSON.stringify(err.response.data.extras.result_codes)}`
+        : `Stellar tx failed: ${err.message || 'Unknown error'}`;
+    }
+
+    const txStatus = stellarTxHash ? 'COMPLETED' : 'FAILED';
+
+    // ── 6. Create the Transaction row ──
     const transaction = await prisma.transaction.create({
       data: {
         batchId,
         fromUserId,
         toUserId,
-        stellarTxHash: transfer.transactionHash,
-        status: 'COMPLETED',
+        stellarTxHash,
+        status: txStatus,
       },
       include: {
-        batch: { select: { id: true, cropType: true, status: true } },
-        fromUser: { select: { id: true, name: true, role: true } },
-        toUser: { select: { id: true, name: true, role: true } },
+        batch: { select: { id: true, cropType: true, status: true, stellarAssetCode: true } },
+        fromUser: { select: { id: true, name: true, role: true, stellarPublicKey: true } },
+        toUser: { select: { id: true, name: true, role: true, stellarPublicKey: true } },
       },
     });
 
-    // ── 6. Update the batch status based on recipient's role ──
+    // ── 7. If the transfer failed, return a clean error ──
+    if (txStatus === 'FAILED') {
+      res.status(502).json({
+        success: false,
+        error: stellarError,
+        data: transaction,
+      });
+      return;
+    }
+
+    // ── 8. Update the batch status based on recipient's role ──
     const newBatchStatus = statusForRecipientRole(toUser.role);
     const updatedBatch = await prisma.batch.update({
       where: { id: batchId },
       data: { status: newBatchStatus },
     });
+
+    const explorerLink = `https://stellar.expert/explorer/testnet/tx/${stellarTxHash}`;
 
     res.status(201).json({
       success: true,
@@ -126,7 +165,8 @@ export async function createTransaction(req: Request, res: Response, next: NextF
         newStatus: updatedBatch.status,
       },
       stellar: {
-        transactionHash: transfer.transactionHash,
+        transactionHash: stellarTxHash,
+        explorerLink,
       },
     });
   } catch (err) {

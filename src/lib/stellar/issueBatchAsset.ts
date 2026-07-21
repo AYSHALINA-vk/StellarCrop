@@ -49,10 +49,10 @@ export async function issueBatchAsset(
   const issuerPublicKey = farmerKeypair.publicKey();
 
   // ── 2. Generate a unique asset code (max 12 chars) ───
-  // Format: "CRP" + first 9 hex chars of batchId (hyphens stripped)
-  // Example batchId "a1b2c3d4-e5f6-..." → asset code "CRPA1B2C3D4E"
-  const hexChars = batchId.replace(/-/g, '').substring(0, 9).toUpperCase();
-  const assetCode = `CRP${hexChars}`;
+  // Format: "CROP" + first 8 hex chars of batchId (hyphens stripped)
+  // Example batchId "a1b2c3d4-e5f6-..." → asset code "CROPA1B2C3D4"
+  const hexChars = batchId.replace(/-/g, '').substring(0, 8).toUpperCase();
+  const assetCode = `CROP${hexChars}`;
 
   // ── 3. Create the Stellar Asset object ───────────────
   const asset = new Asset(assetCode, issuerPublicKey);
