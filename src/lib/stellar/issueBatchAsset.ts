@@ -86,6 +86,17 @@ export async function issueBatchAsset(
     .setTimeout(30)
     .build();
 
+    async function submitWithRetry(server: any, tx: any, retries = 2) {
+  for (let i = 0; i <= retries; i++) {
+    try {
+      return await server.submitTransaction(tx);
+    } catch (err) {
+      if (i === retries) throw err;
+      await new Promise((r) => setTimeout(r, 1500));
+    }
+  }
+}
+
   // ── 6. Sign & submit ────────────────────────────────
   transaction.sign(farmerKeypair);
   const result = await server.submitTransaction(transaction);

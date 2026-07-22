@@ -105,6 +105,17 @@ export async function verifyBatchHash(
     return false;
   }
 
+  async function submitWithRetry(server: any, tx: any, retries = 2) {
+  for (let i = 0; i <= retries; i++) {
+    try {
+      return await server.submitTransaction(tx);
+    } catch (err) {
+      if (i === retries) throw err;
+      await new Promise((r) => setTimeout(r, 1500));
+    }
+  }
+}
+
   // Horizon returns data values as base64-encoded strings
   const storedHash = Buffer.from(storedBase64, 'base64').toString('utf-8');
 

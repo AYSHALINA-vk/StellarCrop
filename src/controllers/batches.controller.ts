@@ -46,14 +46,12 @@ export async function createBatch(req: Request, res: Response, next: NextFunctio
       expiryDate, region,
     } = req.body;
 
-    // ── 1. Look up the farmer and their Stellar secret key ──
     const farmer = await prisma.user.findUnique({ where: { id: farmerId } });
     if (!farmer) throw new AppError('Farmer not found', 404);
     if (!farmer.stellarSecretKey) {
       throw new AppError('Farmer does not have a Stellar secret key configured', 400);
     }
 
-    // ── 2. Create the batch row in Postgres (status: HARVESTED) ──
     const created = await prisma.batch.create({
       data: {
         farmerId,
@@ -65,14 +63,11 @@ export async function createBatch(req: Request, res: Response, next: NextFunctio
       },
     });
 
-    // ── 3. Issue the batch asset on Stellar ──
     const issued = await issueBatchAsset(farmer.stellarSecretKey, created.id);
 
-    // ── 4. Anchor the batch data hash on Stellar ──
     const batchDataForHash = { cropType, quantity, harvestDate, expiryDate, region, farmerId };
     const anchored = await anchorBatchHash(farmer.stellarSecretKey, created.id, batchDataForHash);
 
-    // ── 5. Update the batch row with Stellar asset code & data hash ──
     const batch = await prisma.batch.update({
       where: { id: created.id },
       data: {
