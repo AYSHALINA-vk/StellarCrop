@@ -1,65 +1,68 @@
-import Image from "next/image";
+import Link from "next/link";
 
-export default function Home() {
+export default function LandingPage() {
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+    <main className="min-h-screen relative overflow-hidden">
+      {/* ambient background glow */}
+      <div className="absolute top-[-10%] right-[-5%] w-[500px] h-[500px] rounded-full bg-green-700 blur-3xl animate-glow pointer-events-none" />
+      <div className="absolute bottom-[-15%] left-[-10%] w-[400px] h-[400px] rounded-full bg-emerald-500 blur-3xl animate-glow pointer-events-none" />
+
+      <section className="relative max-w-5xl mx-auto px-6 pt-24 pb-20">
+        <div className="text-xs uppercase tracking-widest text-green-400 mb-4 animate-fade-up">
+          Built on Stellar
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+
+        <h1 className="text-5xl sm:text-6xl font-bold mb-6 leading-tight animate-fade-up delay-1">
+          <span className="inline-block hover:scale-[1.02] transition-transform duration-300">
+            StellarCrop
+          </span>
+        </h1>
+
+        <p className="text-lg sm:text-xl text-neutral-300 mb-4 animate-fade-up delay-2">
+          Farm-to-table traceability, tokenized on Stellar.
+        </p>
+
+        <p className="text-lg text-neutral-400 max-w-2xl mb-10 animate-fade-up delay-3">
+          Every crop batch, tokenized. Every hand it passes through, verified on-chain.
+          Every consumer, one scan away from the truth.
+        </p>
+
+        <div className="flex gap-4 animate-fade-up delay-4">
+          <Link
+            href="/select"
+            className="bg-green-700 hover:bg-green-500 hover:shadow-lg hover:shadow-green-700/30 hover:-translate-y-0.5 rounded-lg px-6 py-3 font-medium transition-all duration-300"
           >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
+            Enter Demo
+          </Link>
+           <a
+            href="https://github.com/AYSHALINA-vk/StellarCrop"
             target="_blank"
-            rel="noopener noreferrer"
+            className="border border-neutral-700 hover:border-neutral-400 hover:-translate-y-0.5 rounded-lg px-6 py-3 font-medium transition-all duration-300"
           >
-            Documentation
+            View Source
           </a>
         </div>
-      </main>
-    </div>
+      </section>
+
+      <section className="relative max-w-5xl mx-auto px-6 py-16 grid grid-cols-1 sm:grid-cols-3 gap-6 border-t border-neutral-900">
+        {[
+          ["🌾", "Farmer", "Tokenizes each batch with harvest date, expiry, and region — hashed and anchored on-chain."],
+          ["📦", "Wholesaler & Retailer", "Browse verified crop listings, claim batches, and move real Stellar assets down the chain."],
+          ["🛒", "Consumer", "Scan a QR code to see the full, tamper-evident chain of custody — farm to table."],
+        ].map(([emoji, title, desc], i) => (
+          <div
+            key={title}
+            className={`bg-neutral-900 border border-neutral-800 rounded-xl p-6 transition-all duration-300 hover:border-green-700/60 hover:-translate-y-1 hover:shadow-xl hover:shadow-green-900/20 animate-fade-up`}
+            style={{ animationDelay: `${0.6 + i * 0.15}s` }}
+          >
+            <div className="text-3xl mb-3 animate-float" style={{ animationDelay: `${i * 0.4}s` }}>
+              {emoji}
+            </div>
+            <div className="font-semibold mb-2">{title}</div>
+            <div className="text-sm text-neutral-400">{desc}</div>
+          </div>
+        ))}
+      </section>
+    </main>
   );
 }
